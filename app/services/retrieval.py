@@ -1,10 +1,10 @@
 from app.config import settings
 from pinecone import Pinecone
 from flashrank import RerankRequest
+from flashrank import Ranker
 
 class RetrievalService:
-    def __init__(self, ranker, embedder):
-        self.ranker = ranker
+    def __init__(self, embedder):
         self.embedder = embedder
 
     async def get_embeddings(self, texts):
@@ -33,6 +33,7 @@ class RetrievalService:
         )
         return user_query_vector, response['matches']
 
+    ranker = Ranker(model_name="ms-marco-MiniLM-L-12-v2", cache_dir="./cache")
     def rerank(self, user_query, retrieved_data):
         rerankrequest = RerankRequest(query=user_query, passages=retrieved_data)
         return self.ranker.rerank(rerankrequest)   

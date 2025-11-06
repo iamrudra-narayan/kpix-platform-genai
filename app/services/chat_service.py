@@ -1,12 +1,10 @@
 from app.config import settings
 from app.services.retrieval import RetrievalService
-from flashrank import Ranker
 from sentence_transformers import SentenceTransformer
 
-ranker = Ranker(model_name="ms-marco-MiniLM-L-12-v2", cache_dir="./cache")
 embedder = SentenceTransformer(settings.EMBEDDING_MODEL)
 
-retrieval_service = RetrievalService(ranker, embedder)
+retrieval_service = RetrievalService(embedder)
 
 class ChatService:
     def __init__(self, openai_client):
