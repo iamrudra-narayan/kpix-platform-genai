@@ -4,11 +4,22 @@ from flashrank import RerankRequest
 from flashrank import Ranker
 
 class RetrievalService:
-    def __init__(self, embedder):
-        self.embedder = embedder
-
+    def __init__(self, embedding_model):
+        self.embedding_model = embedding_model
+    
     async def get_embeddings(self, texts):
-        return self.embedder.encode(texts)
+        if isinstance(texts, str):
+            texts = [texts]
+        
+        # Convert generator → list of np arrays → list of lists
+        embeddings = [emb.tolist() for emb in self.embedding_model.embed(texts)]
+        return embeddings[0] if len(embeddings) == 1 else embeddings
+
+    # def __init__(self, embedder):
+    #     self.embedder = embedder
+
+    # async def get_embeddings(self, texts):
+    #     return self.embedder.encode(texts)
     
     def pinecone_index_details(self):
         pinecone = Pinecone(api_key=settings.PINECONE_VECTOR_DB_KEY)

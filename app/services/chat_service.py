@@ -1,10 +1,14 @@
 from app.config import settings
 from app.services.retrieval import RetrievalService
 from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
-embedder = SentenceTransformer(settings.EMBEDDING_MODEL)
+# embedder = SentenceTransformer(settings.EMBEDDING_MODEL)
 
-retrieval_service = RetrievalService(embedder)
+# Load tiny model (~22MB, downloads once)
+embedding_model = TextEmbedding(model_name=settings.EMBEDDING_MODEL)
+
+retrieval_service = RetrievalService(embedding_model)
 
 class ChatService:
     def __init__(self, openai_client):
