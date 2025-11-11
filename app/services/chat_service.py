@@ -1,6 +1,5 @@
 from app.config import settings
 from app.services.retrieval import RetrievalService
-from sentence_transformers import SentenceTransformer
 from fastembed import TextEmbedding
 
 # embedder = SentenceTransformer(settings.EMBEDDING_MODEL)
@@ -11,23 +10,17 @@ embedding_model = TextEmbedding(model_name=settings.EMBEDDING_MODEL)
 retrieval_service = RetrievalService(embedding_model)
 
 class ChatService:
-    def __init__(self, openai_client):
-        self.openai_client = openai_client
+    def __init__(self, chat_model_client):
+        self.chat_model_client = chat_model_client
 
     async def get_chat_response(self, user_query):
-        return await self.question_answer_bot(user_query = user_query, llm_name=settings.LLM_NAME)
+        return await self.question_answer_bot(user_query = user_query)
     
-    async def ask_questions(self, llm_name, prompt):
-        response = self.openai_client.chat.completions.create(
-        model=llm_name,
-        messages=[
-            {"role": "system", "content": "You are a helpful research assistant."},
-            {"role": "user", "content": prompt},
-        ])
-
-        return response.choices[0].message.content
+    async def ask_questions(self, prompt):
+        response = await self.chat_model_client.generate_content_async(prompt)
+        return response.text
     
-    async def question_answer_bot(self, user_query, llm_name=settings.LLM_NAME):
+    async def question_answer_bot(self, user_query):
         _, matches = await retrieval_service.get_top_retrieval(user_query)
 
         retrieved_formatted_data = []
@@ -71,7 +64,7 @@ class ChatService:
                 question: ```{user_query}```
                 context: ```{context}```
                 """
-        base_prompt_response = await self.ask_questions(llm_name, base_prompt)
+        base_prompt_response = await self.ask_questions(base_prompt)
 
         # After provide valid question
         if base_prompt_response == "<response not available>":
@@ -95,4 +88,4 @@ class ChatService:
                     question: ```{user_query}``` \
                     context: ```{context}```
                 """
-        return await self.ask_questions(llm_name, prompt)
+        return await self.ask_questions(prompt)
