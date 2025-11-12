@@ -1,11 +1,11 @@
 from app.config import settings
 from pinecone import Pinecone
-from flashrank import RerankRequest
-from flashrank import Ranker
+from rank_bm25 import BM25Okapi
 
 class RetrievalService:
     def __init__(self, embedding_model):
         self.embedding_model = embedding_model
+        self.bm25 = None
     
     async def get_embeddings(self, texts):
         if isinstance(texts, str):
@@ -14,12 +14,6 @@ class RetrievalService:
         # Convert generator → list of np arrays → list of lists
         embeddings = [emb.tolist() for emb in self.embedding_model.embed(texts)]
         return embeddings[0] if len(embeddings) == 1 else embeddings
-
-    # def __init__(self, embedder):
-    #     self.embedder = embedder
-
-    # async def get_embeddings(self, texts):
-    #     return self.embedder.encode(texts)
     
     def pinecone_index_details(self):
         pinecone = Pinecone(api_key=settings.PINECONE_VECTOR_DB_KEY)
@@ -44,7 +38,22 @@ class RetrievalService:
         )
         return user_query_vector, response['matches']
 
-    ranker = Ranker(model_name="ms-marco-MiniLM-L-12-v2", cache_dir="./cache")
+    def build_index(self, retrieved_data):
+        self.bm25 = BM25Okapi(retrieved_data)
+
     def rerank(self, user_query, retrieved_data):
-        rerankrequest = RerankRequest(query=user_query, passages=retrieved_data)
-        return self.ranker.rerank(rerankrequest)   
+        if not self.bm25:
+            raise ValueError("BM25 index not built – call build_index() first")
+
+        # Use only top-k (already filtered by Pinecone)
+        hits = retrieved_data[:int(settings.TOP_K_RETREIVAL)]
+
+        # Score the *same* docs that are in the index
+        query_tokens = user_query.lower().split()
+        scores = self.bm25.get_scores(query_tokens)
+
+        # Attach scores (order matches because retrieved_data order = index order)
+        for hit, score in zip(hits, scores):
+            hit["final_score"] = score
+
+        return sorted(hits, key=lambda x: x["final_score"], reverse=True)  
