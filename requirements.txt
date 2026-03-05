@@ -1,0 +1,6 @@
+fastapi[standard]
+dotenv
+google-genai
+fastembed
+pinecone
+rank-bm25
