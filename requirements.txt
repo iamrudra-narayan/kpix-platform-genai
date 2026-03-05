@@ -5,3 +5,4 @@ fastembed
 pinecone
 rank-bm25
 gunicorn
+onnxruntime
